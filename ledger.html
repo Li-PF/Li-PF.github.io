@@ -7,30 +7,30 @@
 <style>
 /* ====== 变量 ====== */
 :root {
-  --bg:       #F2F3F5;
+  --bg:       #EBEDF0;
   --card:     #FFFFFF;
-  --text:     #1D2129;
-  --text2:    #6B7280;
-  --text3:    #9CA3AF;
-  --border:   #E5E7EB;
-  --border-light: #F3F4F6;
-  --primary:  #1E293B;
-  --primary-hover: #334155;
-  --profit:   #059669;
-  --profit-bg:#ECFDF5;
-  --loss:     #DC2626;
-  --loss-bg:  #FEF2F2;
-  --revenue:  #3B82F6;
-  --revenue-bg:#EFF6FF;
-  --cost:     #8B5CF6;
-  --cost-bg:  #F5F3FF;
-  --rent:     #F59E0B;
-  --rent-bg:  #FFFBEB;
+  --text:     #0F1419;
+  --text2:    #4B5563;
+  --text3:    #6B7280;
+  --border:   #D1D5DB;
+  --border-light: #E5E7EB;
+  --primary:  #0F172A;
+  --primary-hover: #1E293B;
+  --profit:   #047857;
+  --profit-bg:#D1FAE5;
+  --loss:     #B91C1C;
+  --loss-bg:  #FEE2E2;
+  --revenue:  #1D4ED8;
+  --revenue-bg:#DBEAFE;
+  --cost:     #6D28D9;
+  --cost-bg:  #EDE9FE;
+  --rent:     #D97706;
+  --rent-bg:  #FEF3C7;
   --radius:   14px;
   --radius-sm:8px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
   --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
 }
 
@@ -81,7 +81,7 @@ input{ font-family:inherit; outline:none; border:none; }
   font-size: 1.15rem;
 }
 .header-logo h1{
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.3px;
 }
@@ -91,7 +91,7 @@ input{ font-family:inherit; outline:none; border:none; }
   gap: 10px;
 }
 .header-right label{
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: rgba(255,255,255,0.6);
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -139,7 +139,7 @@ input{ font-family:inherit; outline:none; border:none; }
   flex-shrink: 0;
 }
 .rent-label{
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
@@ -156,12 +156,12 @@ input{ font-family:inherit; outline:none; border:none; }
   color: var(--text2);
 }
 #rentInput{
-  width: 120px;
+  width: 130px;
   padding: 10px 14px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   text-align: right;
   transition: var(--transition);
@@ -173,7 +173,7 @@ input{ font-family:inherit; outline:none; border:none; }
   box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
 }
 .rent-hint{
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--text3);
   white-space: nowrap;
 }
@@ -228,14 +228,14 @@ input{ font-family:inherit; outline:none; border:none; }
 .summary-card.net-card.loss-card .card-icon{ background: var(--loss-bg); }
 
 .summary-card .slabel{
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: var(--text3);
   font-weight: 500;
   margin-bottom: 4px;
   letter-spacing: 0.3px;
 }
 .summary-card .sval{
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 800;
   letter-spacing: -1px;
 }
@@ -260,12 +260,12 @@ input{ font-family:inherit; outline:none; border:none; }
   gap: 10px;
 }
 .table-header-bar h3{
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text);
 }
 .table-header-bar .count-badge{
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--text3);
   background: var(--bg);
@@ -278,16 +278,15 @@ input{ font-family:inherit; outline:none; border:none; }
 table{
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 thead th{
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
-  font-size: 0.76rem;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  font-size: 0.82rem;
+  color: var(--text2);
+  letter-spacing: 0.5px;
   background: #FAFBFC;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -308,7 +307,7 @@ td input{
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   text-align: right;
   color: var(--text);
   transition: var(--transition);
@@ -325,7 +324,7 @@ td input:focus{
 /* 天利润列 */
 .col-profit{
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 .profit-positive{ color: var(--profit); }
 .profit-negative{ color: var(--loss); }
@@ -353,12 +352,12 @@ tbody tr:hover .btn-del{ opacity: 1; }
 /* 合计行 */
 tfoot td{
   font-weight: 700;
-  font-size: 0.93rem;
+  font-size: 0.98rem;
   background: #F8FAFC;
   border-top: 2px solid var(--border);
   padding: 14px 16px;
 }
-tfoot .profit-positive{ font-size: 0.93rem; }
+tfoot .profit-positive{ font-size: 0.98rem; }
 
 /* ====== 空状态 ====== */
 .empty-state{
@@ -377,7 +376,7 @@ tfoot .profit-positive{ font-size: 0.93rem; }
 }
 .empty-state p{
   color: var(--text3);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 /* ====== 添加按钮 ====== */
@@ -393,7 +392,7 @@ tfoot .profit-positive{ font-size: 0.93rem; }
   background: var(--primary);
   color: #fff;
   border-radius: var(--radius-sm);
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   font-weight: 600;
   transition: var(--transition);
   display: flex;
@@ -412,7 +411,7 @@ tfoot .profit-positive{ font-size: 0.93rem; }
 .footer-note{
   margin-top: 16px;
   text-align: center;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--text3);
   display: flex;
   align-items: center;
