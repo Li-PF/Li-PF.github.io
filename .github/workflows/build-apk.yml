@@ -2,51 +2,116 @@ name: 打包 Android APK
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'ledger.html'
-      - 'manifest.json'
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platforms;android-34 build-tools;34.0.0'
+        run: |
+          ANDROID_SDK_ROOT=$HOME/android-sdk
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
+          # Download command line tools
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mv cmdline-tools latest
+
+          # Set PATH
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
+          echo "$ANDROID_SDK_ROOT/build-tools/34.0.0" >> $GITHUB_PATH
+
+          # Accept licenses & install SDK
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
 
       - name: Create Android project
         run: |
+          # Project structure
           mkdir -p app/src/main/java/com/dayprofit/app
           mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/drawable
 
-          # 复制图标
-          cp icon-192.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+          # Copy icon as a simple PNG
+          cp icon-192.png app/src/main/res/drawable/ic_launcher.png
 
-          # AndroidManifest.xml
-          cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
+          # ---- settings.gradle ----
+          cat > settings.gradle << 'EOF'
+          rootProject.name = "DayProfit"
+          include ':app'
+          EOF
+
+          # ---- root build.gradle ----
+          cat > build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.0' apply false
+          }
+          EOF
+
+          # ---- app/build.gradle ----
+          cat > app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.dayprofit.app'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.dayprofit.app"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              signingConfigs {
+                  release {
+                      storeFile file("../../release.keystore")
+                      storePassword "android123"
+                      keyAlias "dayprofit"
+                      keyPassword "android123"
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
+              }
+          }
+          EOF
+
+          # ---- AndroidManifest.xml ----
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.dayprofit.app">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
               <application
                   android:allowBackup="true"
-                  android:icon="@mipmap/ic_launcher"
+                  android:icon="@drawable/ic_launcher"
                   android:label="日利润"
                   android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="true">
@@ -61,44 +126,38 @@ jobs:
                   </activity>
               </application>
           </manifest>
-          MANIFEST
+          EOF
 
-          # MainActivity.java
-          cat > app/src/main/java/com/dayprofit/app/MainActivity.java << 'JAVA'
+          # ---- MainActivity.java ----
+          cat > app/src/main/java/com/dayprofit/app/MainActivity.java << 'EOF'
           package com.dayprofit.app;
 
           import android.app.Activity;
           import android.os.Bundle;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.webkit.WebSettings;
-          import android.webkit.WebChromeClient;
           import android.view.Window;
           import android.view.WindowManager;
-          import android.graphics.Color;
-          import android.os.Build;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
 
           public class MainActivity extends Activity {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  // 状态栏深色
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                      Window window = getWindow();
-                      window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                      window.setStatusBarColor(Color.parseColor("#0F172A"));
-                  }
+                  Window window = getWindow();
+                  window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                  window.setStatusBarColor(0xFF0F172A);
 
                   WebView webView = new WebView(this);
                   setContentView(webView);
 
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setAllowFileAccess(false);
-                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
                   webView.setWebViewClient(new WebViewClient());
                   webView.setWebChromeClient(new WebChromeClient());
@@ -108,90 +167,20 @@ jobs:
 
               @Override
               public void onBackPressed() {
-                  // 不处理返回键，让 App 像单页应用一样运行
                   moveTaskToBack(true);
               }
           }
-          JAVA
+          EOF
 
-          # strings.xml
-          cat > app/src/main/res/values/strings.xml << 'XML'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <string name="app_name">日利润</string>
-          </resources>
-          XML
-
-          # styles.xml
-          cat > app/src/main/res/values/styles.xml << 'XML'
+          # ---- res/values/styles.xml ----
+          cat > app/src/main/res/values/styles.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
                   <item name="android:statusBarColor">#0F172A</item>
-                  <item name="android:navigationBarColor">#0F172A</item>
               </style>
           </resources>
-          XML
-
-          # build.gradle (project)
-          cat > build.gradle << 'GRADLE'
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.0'
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          GRADLE
-
-          # build.gradle (app)
-          cat > app/build.gradle << 'GRADLE'
-          apply plugin: 'com.android.application'
-
-          android {
-              namespace 'com.dayprofit.app'
-              compileSdk 34
-
-              defaultConfig {
-                  applicationId "com.dayprofit.app"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          GRADLE
-
-          # settings.gradle
-          cat > settings.gradle << 'GRADLE'
-          rootProject.name = "DayProfit"
-          include ':app'
-          GRADLE
-
-          # gradle.properties
-          cat > gradle.properties << 'PROPS'
-          android.useAndroidX=true
-          org.gradle.jvmargs=-Xmx2048m
-          PROPS
+          EOF
 
       - name: Generate keystore
         run: |
@@ -201,26 +190,24 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android123 \
             -keypass android123 \
-            -dname "CN=DayProfit, OU=Dev, O=DayProfit, L=Chengdu, ST=Sichuan, C=CN" \
+            -dname "CN=DayProfit, OU=Dev, O=DayProfit, L=CD, ST=SC, C=CN" \
             -noprompt
 
       - name: Build APK
         run: |
-          chmod +x gradlew 2>/dev/null || true
-          gradle wrapper --gradle-version 8.5 2>/dev/null || true
-          ./gradlew app:assembleRelease 2>/dev/null || \
-          gradle app:assembleRelease
+          # Generate gradle wrapper
+          gradle wrapper --gradle-version 8.5
 
-      - name: Sign APK
+          # Build
+          chmod +x gradlew
+          ./gradlew app:assembleRelease --no-daemon
+
+      - name: Collect APK
         run: |
-          APK=$(find app/build -name "*.apk" | head -1)
-          if [ -z "$APK" ]; then
-            echo "APK not found, checking build output..."
-            find . -name "*.apk" 2>/dev/null
-            exit 1
-          fi
-          echo "Found APK: $APK"
-          cp "$APK" day-profit.apk
+          find . -name "*.apk" -type f
+          cp app/build/outputs/apk/release/app-release.apk day-profit.apk 2>/dev/null || \
+          cp $(find app/build -name "*.apk" | head -1) day-profit.apk 2>/dev/null
+          ls -lh day-profit.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
