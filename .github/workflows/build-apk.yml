@@ -15,50 +15,47 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Setup Android SDK
         run: |
-          export ANDROID_HOME=$HOME/android-sdk
+          ANDROID_HOME=$HOME/android-sdk
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd $ANDROID_HOME/cmdline-tools
-          curl -sLo tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          curl -sL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q tools.zip
           mv cmdline-tools latest
-
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses 2>&1 | cat
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
-            "platform-tools" "platforms;android-34" "build-tools;34.0.0" 2>&1 | cat
+            "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-      - name: Create Android project
+      - name: Create project files
         run: |
           mkdir -p app/src/main/java/com/dayprofit/app
           mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/mipmap-hdpi
+          cp icon-192.png app/src/main/res/mipmap-hdpi/ic_launcher.png
 
-          cp icon-192.png app/src/main/res/drawable/ic_launcher.png
+          cat > settings.gradle << 'EOF'
+          rootProject.name = "DayProfit"
+          include ":app"
+          EOF
 
-          # ---- settings.gradle ----
-          echo 'rootProject.name="DayProfit"' > settings.gradle
-          echo 'include ":app"' >> settings.gradle
+          cat > build.gradle << 'EOF'
+          plugins { id("com.android.application") version "8.2.0" apply false }
+          EOF
 
-          # ---- root build.gradle ----
-          echo 'plugins { id "com.android.application" version "8.2.0" apply false }' > build.gradle
-
-          # ---- app/build.gradle ----
           cat > app/build.gradle << 'EOF'
-          plugins { id 'com.android.application' }
+          plugins { id("com.android.application") }
           android {
-              namespace 'com.dayprofit.app'
+              namespace "com.dayprofit.app"
               compileSdk 34
               defaultConfig {
                   applicationId "com.dayprofit.app"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
+                  minSdk 21; targetSdk 34
+                  versionCode 1; versionName "1.0"
               }
               signingConfigs {
                   release {
@@ -74,18 +71,15 @@ jobs:
           }
           EOF
 
-          # ---- AndroidManifest.xml ----
           cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET"/>
               <application
-                  android:allowBackup="true"
-                  android:icon="@drawable/ic_launcher"
+                  android:icon="@mipmap/ic_launcher"
                   android:label="日利润"
                   android:usesCleartextTraffic="true">
-                  <activity
-                      android:name=".MainActivity"
+                  <activity android:name=".MainActivity"
                       android:configChanges="orientation|screenSize"
                       android:exported="true">
                       <intent-filter>
@@ -97,77 +91,39 @@ jobs:
           </manifest>
           EOF
 
-          # ---- MainActivity.java ----
           cat > app/src/main/java/com/dayprofit/app/MainActivity.java << 'EOF'
           package com.dayprofit.app;
           import android.app.Activity;
           import android.os.Bundle;
           import android.view.Window;
           import android.view.WindowManager;
-          import android.webkit.WebChromeClient;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           public class MainActivity extends Activity {
               @Override
-              protected void onCreate(Bundle s) {
-                  super.onCreate(s);
+              protected void onCreate(Bundle b) {
+                  super.onCreate(b);
                   Window w = getWindow();
                   w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
                   w.setStatusBarColor(0xFF0F172A);
                   WebView v = new WebView(this);
                   setContentView(v);
-                  WebSettings ws = v.getSettings();
-                  ws.setJavaScriptEnabled(true);
-                  ws.setDomStorageEnabled(true);
+                  WebSettings s = v.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
                   v.setWebViewClient(new WebViewClient());
-                  v.setWebChromeClient(new WebChromeClient());
                   v.loadUrl("https://li-pf.github.io/ledger.html");
               }
-              @Override public void onBackPressed() { moveTaskToBack(true); }
           }
           EOF
 
-          # ---- res ----
-          echo '<resources><style name="AppTheme" parent="android:Theme.Material.NoActionBar"><item name="android:statusBarColor">#0F172A</item></style></resources>' > app/src/main/res/values/styles.xml
-
-      - name: Create Gradle Wrapper (no Gradle required)
-        run: |
-          mkdir -p gradle/wrapper
-
-          # Download gradle-wrapper.jar
-          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
-            https://github.com/Li-PF/Li-PF.github.io/raw/refs/heads/main/.github/gradle-wrapper.jar 2>/dev/null || \
-          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
-            https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
-          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
-            "https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/8.5/gradle-wrapper-8.5.jar" 2>/dev/null || true
-
-          # Alternative: generate minimal wrapper jar via gradle init
-          if [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Downloading gradle distribution..."
-            curl -sL https://services.gradle.org/distributions/gradle-8.5-bin.zip -o /tmp/gradle.zip
-            unzip -q /tmp/gradle.zip -d /tmp
-            /tmp/gradle-8.5/bin/gradle wrapper --gradle-version 8.5
-          fi
-
-          # Create properties
-          cat > gradle/wrapper/gradle-wrapper.properties << 'PROPS'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-          networkTimeout=10000
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          PROPS
-
-          # Create gradlew script
-          cat > gradlew << 'SH'
-          #!/bin/sh
-          DIR=$(cd "$(dirname "$0")" && pwd)
-          exec java -cp "$DIR/gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"
-          SH
-          chmod +x gradlew
+          cat > app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.NoActionBar"/>
+          </resources>
+          EOF
 
       - name: Generate keystore
         run: |
@@ -177,11 +133,14 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 36500 \
             -storepass android123 \
             -keypass android123 \
-            -dname "CN=DP,O=DP,L=CD,ST=SC,C=CN" \
+            -dname "CN=DP" \
             -noprompt
 
       - name: Build APK
-        run: ./gradlew app:assembleRelease --no-daemon
+        run: |
+          gradle wrapper --gradle-version 8.5
+          chmod +x gradlew
+          ./gradlew app:assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
