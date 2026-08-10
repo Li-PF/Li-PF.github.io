@@ -552,6 +552,9 @@ tfoot .profit-positive{ font-size: 0.98rem; }
       <button class="btn-cloud-action btn-download" onclick="downloadFromCloud()">📥 从云端下载</button>
     </div>
     <p class="cloud-status" id="cloudStatus"></p>
+    <p id="cloudLink" style="display:none;margin-top:10px;font-size:0.84rem">
+      🔗 <a id="gistLink" href="#" target="_blank" style="color:var(--revenue);text-decoration:underline">查看云端数据文件</a>
+    </p>
   </div>
 
   <!-- 摘要卡片 -->
@@ -853,6 +856,7 @@ async function uploadToCloud() {
     }
     localStorage.setItem(CLOUD_KEYS.lastSync, new Date().toISOString());
     document.getElementById('btnCloud').classList.add('synced');
+    showGistLink(result.id);
     status('上传成功 ✓ ' + new Date().toLocaleTimeString(), true);
   } catch (e) {
     status('上传失败: ' + e.message, false);
@@ -889,10 +893,18 @@ async function downloadFromCloud() {
   }
 }
 
+function showGistLink(gistId) {
+  const linkEl = document.getElementById('cloudLink');
+  const aEl = document.getElementById('gistLink');
+  aEl.href = 'https://gist.github.com/Li-PF/' + gistId;
+  linkEl.style.display = 'block';
+}
+
 // 初始化时检查同步状态
 (function checkSync() {
   if (getGistId()) {
     document.getElementById('githubToken').value = getToken();
+    showGistLink(getGistId());
     const lastSync = localStorage.getItem(CLOUD_KEYS.lastSync);
     if (lastSync) {
       document.getElementById('btnCloud').classList.add('synced');
