@@ -1,21 +1,22 @@
-// Service Worker - 日利润计算器离线缓存
-const CACHE_NAME = 'daily-profit-v2';
-const ASSETS = [
-  '/ledger.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
-];
+// Service Worker - 日利润计算器
+const CACHE_NAME = 'daily-profit-v3';
 
-// 安装：预缓存核心文件
+// 安装
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll([
+        '/ledger.html',
+        '/manifest.json',
+        '/icon-192.png',
+        '/icon-512.png'
+      ])
+    )
   );
   self.skipWaiting();
 });
 
-// 激活：清理旧缓存
+// 激活：清理旧版本
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -25,18 +26,19 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// 请求拦截：缓存优先，网络回退
+// 网络优先，失败时回退到缓存
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request).then(response => {
-        // 缓存新请求
-        if (response.ok) {
+    fetch(event.request)
+      .then(response => {
+        if (response.ok && event.request.method === 'GET') {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then(cache =>
+            cache.put(event.request, clone)
+          );
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
