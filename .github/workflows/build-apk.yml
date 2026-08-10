@@ -17,6 +17,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
 
       - name: Setup Android SDK
         run: |
@@ -39,8 +41,22 @@ jobs:
           cp icon-192.png app/src/main/res/mipmap-hdpi/ic_launcher.png
 
           cat > settings.gradle << 'EOF'
+          pluginManagement {
+              repositories {
+                  gradlePluginPortal()
+                  google()
+                  mavenCentral()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           rootProject.name = "DayProfit"
-          include ":app"
+          include(":app")
           EOF
 
           cat > build.gradle << 'EOF'
@@ -140,7 +156,7 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.5
           chmod +x gradlew
-          ./gradlew app:assembleRelease --no-daemon
+          ./gradlew app:assembleRelease --no-daemon --stacktrace --info
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
