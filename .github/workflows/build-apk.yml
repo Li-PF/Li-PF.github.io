@@ -8,73 +8,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
         run: |
-          ANDROID_SDK_ROOT=$HOME/android-sdk
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          export ANDROID_HOME=$HOME/android-sdk
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
 
-          # Download command line tools
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          cd $ANDROID_SDK_ROOT/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-11076708_latest.zip
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
+          curl -sLo tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip
           mv cmdline-tools latest
 
-          # Set PATH
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
-          echo "$ANDROID_SDK_ROOT/build-tools/34.0.0" >> $GITHUB_PATH
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses 2>&1 | cat
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+            "platform-tools" "platforms;android-34" "build-tools;34.0.0" 2>&1 | cat
 
-          # Accept licenses & install SDK
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
-            "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Create Android project
         run: |
-          # Project structure
           mkdir -p app/src/main/java/com/dayprofit/app
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/drawable
 
-          # Copy icon as a simple PNG
           cp icon-192.png app/src/main/res/drawable/ic_launcher.png
 
           # ---- settings.gradle ----
-          cat > settings.gradle << 'EOF'
-          rootProject.name = "DayProfit"
-          include ':app'
-          EOF
+          echo 'rootProject.name="DayProfit"' > settings.gradle
+          echo 'include ":app"' >> settings.gradle
 
           # ---- root build.gradle ----
-          cat > build.gradle << 'EOF'
-          plugins {
-              id 'com.android.application' version '8.2.0' apply false
-          }
-          EOF
+          echo 'plugins { id "com.android.application" version "8.2.0" apply false }' > build.gradle
 
           # ---- app/build.gradle ----
           cat > app/build.gradle << 'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-
+          plugins { id 'com.android.application' }
           android {
               namespace 'com.dayprofit.app'
               compileSdk 34
-
               defaultConfig {
                   applicationId "com.dayprofit.app"
                   minSdk 21
@@ -82,7 +60,6 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
-
               signingConfigs {
                   release {
                       storeFile file("../../release.keystore")
@@ -91,12 +68,8 @@ jobs:
                       keyPassword "android123"
                   }
               }
-
               buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                      minifyEnabled false
-                  }
+                  release { signingConfig signingConfigs.release }
               }
           }
           EOF
@@ -105,23 +78,19 @@ jobs:
           cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
+              <uses-permission android:name="android.permission.INTERNET"/>
               <application
                   android:allowBackup="true"
                   android:icon="@drawable/ic_launcher"
                   android:label="日利润"
-                  android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="true">
                   <activity
                       android:name=".MainActivity"
                       android:configChanges="orientation|screenSize"
                       android:exported="true">
                       <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
                       </intent-filter>
                   </activity>
               </application>
@@ -131,7 +100,6 @@ jobs:
           # ---- MainActivity.java ----
           cat > app/src/main/java/com/dayprofit/app/MainActivity.java << 'EOF'
           package com.dayprofit.app;
-
           import android.app.Activity;
           import android.os.Bundle;
           import android.view.Window;
@@ -140,82 +108,84 @@ jobs:
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
-
           public class MainActivity extends Activity {
               @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  Window window = getWindow();
-                  window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                  window.setStatusBarColor(0xFF0F172A);
-
-                  WebView webView = new WebView(this);
-                  setContentView(webView);
-
-                  WebSettings s = webView.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setDatabaseEnabled(true);
-                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
-
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.setWebChromeClient(new WebChromeClient());
-
-                  webView.loadUrl("https://li-pf.github.io/ledger.html");
+              protected void onCreate(Bundle s) {
+                  super.onCreate(s);
+                  Window w = getWindow();
+                  w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                  w.setStatusBarColor(0xFF0F172A);
+                  WebView v = new WebView(this);
+                  setContentView(v);
+                  WebSettings ws = v.getSettings();
+                  ws.setJavaScriptEnabled(true);
+                  ws.setDomStorageEnabled(true);
+                  v.setWebViewClient(new WebViewClient());
+                  v.setWebChromeClient(new WebChromeClient());
+                  v.loadUrl("https://li-pf.github.io/ledger.html");
               }
-
-              @Override
-              public void onBackPressed() {
-                  moveTaskToBack(true);
-              }
+              @Override public void onBackPressed() { moveTaskToBack(true); }
           }
           EOF
 
-          # ---- res/values/styles.xml ----
-          cat > app/src/main/res/values/styles.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
-                  <item name="android:statusBarColor">#0F172A</item>
-              </style>
-          </resources>
-          EOF
+          # ---- res ----
+          echo '<resources><style name="AppTheme" parent="android:Theme.Material.NoActionBar"><item name="android:statusBarColor">#0F172A</item></style></resources>' > app/src/main/res/values/styles.xml
+
+      - name: Create Gradle Wrapper (no Gradle required)
+        run: |
+          mkdir -p gradle/wrapper
+
+          # Download gradle-wrapper.jar
+          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/Li-PF/Li-PF.github.io/raw/refs/heads/main/.github/gradle-wrapper.jar 2>/dev/null || \
+          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
+            https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
+            "https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/8.5/gradle-wrapper-8.5.jar" 2>/dev/null || true
+
+          # Alternative: generate minimal wrapper jar via gradle init
+          if [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "Downloading gradle distribution..."
+            curl -sL https://services.gradle.org/distributions/gradle-8.5-bin.zip -o /tmp/gradle.zip
+            unzip -q /tmp/gradle.zip -d /tmp
+            /tmp/gradle-8.5/bin/gradle wrapper --gradle-version 8.5
+          fi
+
+          # Create properties
+          cat > gradle/wrapper/gradle-wrapper.properties << 'PROPS'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          networkTimeout=10000
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          PROPS
+
+          # Create gradlew script
+          cat > gradlew << 'SH'
+          #!/bin/sh
+          DIR=$(cd "$(dirname "$0")" && pwd)
+          exec java -cp "$DIR/gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"
+          SH
+          chmod +x gradlew
 
       - name: Generate keystore
         run: |
           keytool -genkey -v \
             -keystore release.keystore \
             -alias dayprofit \
-            -keyalg RSA -keysize 2048 -validity 10000 \
+            -keyalg RSA -keysize 2048 -validity 36500 \
             -storepass android123 \
             -keypass android123 \
-            -dname "CN=DayProfit, OU=Dev, O=DayProfit, L=CD, ST=SC, C=CN" \
+            -dname "CN=DP,O=DP,L=CD,ST=SC,C=CN" \
             -noprompt
 
-      - name: Install Gradle
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip
-          sudo unzip -q gradle-8.5-bin.zip -d /opt
-          echo "/opt/gradle-8.5/bin" >> $GITHUB_PATH
-          /opt/gradle-8.5/bin/gradle --version
-
       - name: Build APK
-        run: |
-          gradle wrapper --gradle-version 8.5
-          chmod +x gradlew
-          ./gradlew app:assembleRelease --no-daemon
-
-      - name: Collect APK
-        run: |
-          find . -name "*.apk" -type f
-          cp app/build/outputs/apk/release/app-release.apk day-profit.apk 2>/dev/null || \
-          cp $(find app/build -name "*.apk" | head -1) day-profit.apk 2>/dev/null
-          ls -lh day-profit.apk
+        run: ./gradlew app:assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: 日利润计算器-APK
-          path: day-profit.apk
+          path: app/build/outputs/apk/release/app-release.apk
           retention-days: 90
