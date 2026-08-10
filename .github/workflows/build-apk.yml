@@ -171,6 +171,11 @@ jobs:
             -dname "CN=DP" \
             -noprompt
 
+      - name: Create Gradle wrapper
+        run: |
+          gradle wrapper --gradle-version 8.5
+          chmod +x gradlew
+
       - name: Diagnostic
         run: |
           echo "=== Java ===" && java -version
@@ -181,10 +186,7 @@ jobs:
           echo "=== Dependencies ===" && ./gradlew :app:dependencies --console=plain 2>&1 | tail -50 || true
 
       - name: Build APK
-        run: |
-          gradle wrapper --gradle-version 8.5
-          chmod +x gradlew
-          ./gradlew app:assembleRelease --no-daemon --stacktrace --info
+        run: ./gradlew app:assembleRelease --no-daemon --stacktrace --info
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
