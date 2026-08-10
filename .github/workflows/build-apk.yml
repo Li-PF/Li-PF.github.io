@@ -193,12 +193,16 @@ jobs:
             -dname "CN=DayProfit, OU=Dev, O=DayProfit, L=CD, ST=SC, C=CN" \
             -noprompt
 
+      - name: Install Gradle
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip
+          sudo unzip -q gradle-8.5-bin.zip -d /opt
+          echo "/opt/gradle-8.5/bin" >> $GITHUB_PATH
+          /opt/gradle-8.5/bin/gradle --version
+
       - name: Build APK
         run: |
-          # Generate gradle wrapper
           gradle wrapper --gradle-version 8.5
-
-          # Build
           chmod +x gradlew
           ./gradlew app:assembleRelease --no-daemon
 
