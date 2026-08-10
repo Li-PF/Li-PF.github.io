@@ -1,0 +1,230 @@
+name: 打包 Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ledger.html'
+      - 'manifest.json'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0'
+
+      - name: Create Android project
+        run: |
+          mkdir -p app/src/main/java/com/dayprofit/app
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/xml
+
+          # 复制图标
+          cp icon-192.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+
+          # AndroidManifest.xml
+          cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.dayprofit.app">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="日利润"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="orientation|screenSize"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          MANIFEST
+
+          # MainActivity.java
+          cat > app/src/main/java/com/dayprofit/app/MainActivity.java << 'JAVA'
+          package com.dayprofit.app;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebChromeClient;
+          import android.view.Window;
+          import android.view.WindowManager;
+          import android.graphics.Color;
+          import android.os.Build;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  // 状态栏深色
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                      Window window = getWindow();
+                      window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                      window.setStatusBarColor(Color.parseColor("#0F172A"));
+                  }
+
+                  WebView webView = new WebView(this);
+                  setContentView(webView);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setAllowFileAccess(false);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.setWebChromeClient(new WebChromeClient());
+
+                  webView.loadUrl("https://li-pf.github.io/ledger.html");
+              }
+
+              @Override
+              public void onBackPressed() {
+                  // 不处理返回键，让 App 像单页应用一样运行
+                  moveTaskToBack(true);
+              }
+          }
+          JAVA
+
+          # strings.xml
+          cat > app/src/main/res/values/strings.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">日利润</string>
+          </resources>
+          XML
+
+          # styles.xml
+          cat > app/src/main/res/values/styles.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+                  <item name="android:statusBarColor">#0F172A</item>
+                  <item name="android:navigationBarColor">#0F172A</item>
+              </style>
+          </resources>
+          XML
+
+          # build.gradle (project)
+          cat > build.gradle << 'GRADLE'
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          GRADLE
+
+          # build.gradle (app)
+          cat > app/build.gradle << 'GRADLE'
+          apply plugin: 'com.android.application'
+
+          android {
+              namespace 'com.dayprofit.app'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.dayprofit.app"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          GRADLE
+
+          # settings.gradle
+          cat > settings.gradle << 'GRADLE'
+          rootProject.name = "DayProfit"
+          include ':app'
+          GRADLE
+
+          # gradle.properties
+          cat > gradle.properties << 'PROPS'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2048m
+          PROPS
+
+      - name: Generate keystore
+        run: |
+          keytool -genkey -v \
+            -keystore release.keystore \
+            -alias dayprofit \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android123 \
+            -keypass android123 \
+            -dname "CN=DayProfit, OU=Dev, O=DayProfit, L=Chengdu, ST=Sichuan, C=CN" \
+            -noprompt
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew 2>/dev/null || true
+          gradle wrapper --gradle-version 8.5 2>/dev/null || true
+          ./gradlew app:assembleRelease 2>/dev/null || \
+          gradle app:assembleRelease
+
+      - name: Sign APK
+        run: |
+          APK=$(find app/build -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "APK not found, checking build output..."
+            find . -name "*.apk" 2>/dev/null
+            exit 1
+          fi
+          echo "Found APK: $APK"
+          cp "$APK" day-profit.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 日利润计算器-APK
+          path: day-profit.apk
+          retention-days: 90
