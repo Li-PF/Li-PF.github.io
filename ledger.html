@@ -417,7 +417,7 @@ tfoot td{
     <div class="summary-card gross-card">
       <div class="card-accent"></div>
       <div class="card-icon">💡</div>
-      <div class="slabel">月毛利润</div>
+      <div class="slabel">月毛利润 <span style="font-size:0.7rem;opacity:0.7">(未扣房租)</span></div>
       <div class="sval" id="sumDaily">¥0</div>
     </div>
     <div class="summary-card net-card" id="netCard">
@@ -634,7 +634,7 @@ function renderMobileCards() {
   summaryEl.innerHTML = `<h3>📌 本月合计</h3>
     <div class="mobile-summary-row"><span>月营业额</span><span class="ms-val">¥${s.totalRevenue.toFixed(2)}</span></div>
     <div class="mobile-summary-row"><span>月总成本</span><span class="ms-val">¥${s.totalCost.toFixed(2)}</span></div>
-    <div class="mobile-summary-row"><span>月毛利润</span><span class="ms-val ${pcls}">¥${s.totalDailyProfit.toFixed(2)}</span></div>
+    <div class="mobile-summary-row"><span>月毛利润 (未扣房租)</span><span class="ms-val ${pcls}">¥${s.totalDailyProfit.toFixed(2)}</span></div>
     <div class="mobile-summary-row" style="border-top:1px solid var(--border-light);padding-top:10px;margin-top:4px">
       <span>🏠 房租</span><span class="ms-val">¥${s.rent.toFixed(2)}</span>
     </div>
