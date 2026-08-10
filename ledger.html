@@ -2,8 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>日利润计算器</title>
+<meta name="theme-color" content="#0F172A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="日利润">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.json">
 <style>
 /* ====== 变量 ====== */
 :root {
@@ -699,6 +705,11 @@ function escapeHtml(str) {
 
 // ==================== 启动 ====================
 init();
+
+// ==================== PWA 注册 ====================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
