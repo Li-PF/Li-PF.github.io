@@ -5,158 +5,535 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日利润计算器</title>
 <style>
+/* ====== 变量 ====== */
 :root {
-  --bg:#F5F6F8; --card:#fff; --text:#1F2329; --text2:#646A73; --text3:#8F959E;
-  --border:#E5E8EC; --primary:#272E3B; --profit:#2BA471; --loss:#E34D59;
-  --radius:12px; --shadow:0 1px 6px rgba(0,0,0,0.05);
+  --bg:       #F2F3F5;
+  --card:     #FFFFFF;
+  --text:     #1D2129;
+  --text2:    #6B7280;
+  --text3:    #9CA3AF;
+  --border:   #E5E7EB;
+  --border-light: #F3F4F6;
+  --primary:  #1E293B;
+  --primary-hover: #334155;
+  --profit:   #059669;
+  --profit-bg:#ECFDF5;
+  --loss:     #DC2626;
+  --loss-bg:  #FEF2F2;
+  --revenue:  #3B82F6;
+  --revenue-bg:#EFF6FF;
+  --cost:     #8B5CF6;
+  --cost-bg:  #F5F3FF;
+  --rent:     #F59E0B;
+  --rent-bg:  #FFFBEB;
+  --radius:   14px;
+  --radius-sm:8px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
 }
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+*,*::before,*::after{ margin:0; padding:0; box-sizing:border-box; }
+
 body{
-  font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
-  background:var(--bg); color:var(--text); line-height:1.5;
-  -webkit-font-smoothing:antialiased; min-height:100vh;
+  font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
-button,input{cursor:pointer;font-family:inherit;outline:none;border:none}
-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:0.88rem;width:100%}
-input:focus{border-color:var(--primary);background:#fff}
 
-/* 头部 */
-.header{background:var(--primary);color:#fff;padding:18px 24px;position:sticky;top:0;z-index:10}
-.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.header h1{font-size:1.2rem;font-weight:700}
+button{ cursor:pointer; font-family:inherit; border:none; outline:none; }
+input{ font-family:inherit; outline:none; border:none; }
 
-/* 主容器 */
-.main{max-width:960px;margin:0 auto;padding:16px 16px 80px}
+/* ====== 头部导航 ====== */
+.header{
+  background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+  color: #fff;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+}
+.header-inner{
+  max-width: 1024px;
+  margin: 0 auto;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-logo{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-logo .logo-icon{
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+.header-logo h1{
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.header-right{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-right label{
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+#monthSelect{
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+#monthSelect:focus{
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.4);
+}
 
-/* 顶部控制栏 */
-.top-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-.top-bar label{font-size:0.82rem;font-weight:600;color:var(--text2);white-space:nowrap}
-.top-bar input[type="month"]{width:auto;min-width:130px}
-.top-bar .rent-input{width:120px}
+/* ====== 主容器 ====== */
+.main{ max-width: 1024px; margin: 0 auto; padding: 24px 20px 100px; }
 
-/* 摘要卡片 */
-.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+/* ====== 房租卡片 ====== */
+.rent-card{
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+.rent-card:hover{ box-shadow: var(--shadow); }
+.rent-icon{
+  width: 44px; height: 44px;
+  background: var(--rent-bg);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.rent-label{
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.rent-input-wrap{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.rent-input-wrap .yen{
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text2);
+}
+#rentInput{
+  width: 120px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: right;
+  transition: var(--transition);
+  color: var(--text);
+}
+#rentInput:focus{
+  border-color: var(--rent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.rent-hint{
+  font-size: 0.78rem;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+/* ====== 摘要卡片 ====== */
+.summary-row{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
 .summary-card{
-  background:var(--card);border-radius:var(--radius);padding:16px 20px;
-  box-shadow:var(--shadow);transition:0.2s
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  border: 1px solid var(--border);
 }
-.summary-card:hover{transform:translateY(-1px);box-shadow:0 2px 12px rgba(0,0,0,0.08)}
-.summary-card .slabel{font-size:0.78rem;color:var(--text2);margin-bottom:4px}
-.summary-card .sval{font-size:1.6rem;font-weight:700;letter-spacing:-0.5px}
-.summary-card.profit .sval{color:var(--profit)}
-.summary-card.loss .sval{color:var(--loss)}
+.summary-card:hover{
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.summary-card .card-accent{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+}
+.summary-card.rev-card .card-accent{ background: var(--revenue); }
+.summary-card.cost-card .card-accent{ background: var(--cost); }
+.summary-card.gross-card .card-accent{ background: var(--primary); }
+.summary-card.net-card .card-accent{ background: var(--profit); }
+.summary-card.net-card.loss-card .card-accent{ background: var(--loss); }
 
-/* 表格 */
-.table-wrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:0.9rem}
-thead{background:#FAFBFC}
-th{padding:12px 14px;text-align:left;font-weight:600;font-size:0.8rem;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:10px 14px;border-bottom:1px solid #F0F1F3;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#FAFBFC}
-td input{padding:6px 10px;font-size:0.86rem;text-align:right}
-td input.date-input{text-align:left}
-td input.note-input{text-align:left}
-.col-profit{font-weight:700;font-size:0.95rem}
-.profit-positive{color:var(--profit)}
-.profit-negative{color:var(--loss)}
-.btn-del{background:none;color:var(--text3);font-size:0.9rem;padding:4px 8px;border-radius:6px;transition:0.15s}
-.btn-del:hover{color:var(--loss);background:#FDECEE}
+.summary-card .card-icon{
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+.summary-card.rev-card .card-icon{ background: var(--revenue-bg); }
+.summary-card.cost-card .card-icon{ background: var(--cost-bg); }
+.summary-card.gross-card .card-icon{ background: #F1F5F9; }
+.summary-card.net-card .card-icon{ background: var(--profit-bg); }
+.summary-card.net-card.loss-card .card-icon{ background: var(--loss-bg); }
+
+.summary-card .slabel{
+  font-size: 0.78rem;
+  color: var(--text3);
+  font-weight: 500;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+.summary-card .sval{
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.summary-card.net-card .sval{ color: var(--profit); }
+.summary-card.net-card.loss-card .sval{ color: var(--loss); }
+
+/* ====== 表格面板 ====== */
+.table-panel{
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.table-header-bar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.table-header-bar h3{
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.table-header-bar .count-badge{
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text3);
+  background: var(--bg);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* ====== 表格 ====== */
+.table-wrap{ overflow-x: auto; }
+table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+thead th{
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.76rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  background: #FAFBFC;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td{
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+  transition: background 0.15s;
+}
+tbody tr:hover td{ background: #F8FAFC; }
+tbody tr:last-child td{ border-bottom: none; }
+
+/* 单元格输入框 */
+td input{
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  text-align: right;
+  color: var(--text);
+  transition: var(--transition);
+}
+td input.date-input{ text-align: left; }
+td input.note-input{ text-align: left; }
+td input:hover{ background: var(--bg); }
+td input:focus{
+  background: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(30,41,59,0.08);
+}
+
+/* 天利润列 */
+.col-profit{
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.profit-positive{ color: var(--profit); }
+.profit-negative{ color: var(--loss); }
+
+/* 删除按钮 */
+.btn-del{
+  background: none;
+  color: var(--text3);
+  font-size: 0.85rem;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  opacity: 0.5;
+}
+tbody tr:hover .btn-del{ opacity: 1; }
+.btn-del:hover{
+  color: var(--loss);
+  background: var(--loss-bg);
+  opacity: 1;
+}
 
 /* 合计行 */
-tfoot td{font-weight:700;font-size:0.92rem;background:#FAFBFC;border-top:2px solid var(--border)}
-tfoot .profit-positive{font-size:0.92rem;font-weight:700}
-
-/* 添加按钮 */
-.btn-add-row{
-  margin-top:12px;padding:10px 20px;background:var(--primary);color:#fff;
-  border-radius:8px;font-size:0.86rem;font-weight:600;transition:0.2s;
-  box-shadow:0 1px 4px rgba(39,46,59,0.2)
+tfoot td{
+  font-weight: 700;
+  font-size: 0.93rem;
+  background: #F8FAFC;
+  border-top: 2px solid var(--border);
+  padding: 14px 16px;
 }
-.btn-add-row:hover{background:#3A4352;transform:translateY(-1px)}
+tfoot .profit-positive{ font-size: 0.93rem; }
 
-/* 空状态 */
-.empty{margin-top:12px;text-align:center;padding:40px;color:var(--text3);font-size:0.9rem}
+/* ====== 空状态 ====== */
+.empty-state{
+  text-align: center;
+  padding: 56px 24px;
+}
+.empty-state .empty-icon{
+  width: 72px; height: 72px;
+  margin: 0 auto 16px;
+  background: var(--bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.empty-state p{
+  color: var(--text3);
+  font-size: 0.9rem;
+}
 
-/* 提示 */
-.tip{font-size:0.78rem;color:var(--text3);margin-top:8px}
+/* ====== 添加按钮 ====== */
+.add-bar{
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-add-row{
+  padding: 10px 22px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.btn-add-row:hover{
+  background: var(--primary-hover);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  transform: translateY(-1px);
+}
+.btn-add-row:active{ transform: scale(0.97); }
 
-/* 响应式 */
-@media(max-width:700px){
-  .summary-row{grid-template-columns:repeat(2,1fr)}
-  .summary-card .sval{font-size:1.3rem}
-  .table-wrap{overflow-x:auto}
-  table{font-size:0.82rem;min-width:650px}
-  th,td{padding:8px 10px}
+/* ====== 页脚 ====== */
+.footer-note{
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* ====== 响应式 ====== */
+@media (max-width: 750px) {
+  .summary-row{ grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .summary-card{ padding: 16px 18px; }
+  .summary-card .sval{ font-size: 1.35rem; }
+  .rent-card{ flex-wrap: wrap; }
+  .rent-input-wrap{ margin-left: 0; }
+  .table-wrap table{ min-width: 680px; font-size: 0.82rem; }
+  th, td{ padding: 8px 10px; }
+}
+
+@media (max-width: 420px) {
+  .header-inner{ height: auto; padding: 12px 0; flex-direction: column; gap: 8px; }
+  .summary-row{ grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
+<!-- ====== 头部 ====== -->
 <header class="header">
   <div class="header-inner">
-    <h1>📊 日利润计算器</h1>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <label style="color:rgba(255,255,255,0.7);font-size:0.8rem">月份</label>
-      <input type="month" id="monthSelect" style="width:auto;min-width:130px;font-size:0.84rem">
+    <div class="header-logo">
+      <div class="logo-icon">📊</div>
+      <h1>日利润计算器</h1>
+    </div>
+    <div class="header-right">
+      <label>📅</label>
+      <input type="month" id="monthSelect">
     </div>
   </div>
 </header>
 
+<!-- ====== 主体 ====== -->
 <main class="main">
+
   <!-- 房租 -->
-  <div class="top-bar">
-    <label>🏠 本月房租</label>
-    <input type="number" id="rentInput" class="rent-input" placeholder="0" step="0.01" min="0">
-    <span style="font-size:0.8rem;color:var(--text3)">填写后在月利润中自动扣除</span>
+  <div class="rent-card">
+    <div class="rent-icon">🏠</div>
+    <span class="rent-label">本月房租</span>
+    <span class="rent-hint">在净利润中自动扣除</span>
+    <div class="rent-input-wrap">
+      <span class="yen">¥</span>
+      <input type="number" id="rentInput" placeholder="0" step="0.01" min="0">
+    </div>
   </div>
 
-  <!-- 摘要 -->
+  <!-- 摘要卡片 -->
   <div class="summary-row">
-    <div class="summary-card">
-      <div class="slabel">📈 月营业额</div>
+    <div class="summary-card rev-card">
+      <div class="card-accent"></div>
+      <div class="card-icon">📈</div>
+      <div class="slabel">月营业额</div>
       <div class="sval" id="sumRevenue">¥0</div>
     </div>
-    <div class="summary-card">
-      <div class="slabel">📉 月总成本</div>
+    <div class="summary-card cost-card">
+      <div class="card-accent"></div>
+      <div class="card-icon">📉</div>
+      <div class="slabel">月总成本</div>
       <div class="sval" id="sumCost">¥0</div>
     </div>
-    <div class="summary-card">
-      <div class="slabel">💡 月毛利润</div>
+    <div class="summary-card gross-card">
+      <div class="card-accent"></div>
+      <div class="card-icon">💡</div>
+      <div class="slabel">月毛利润</div>
       <div class="sval" id="sumDaily">¥0</div>
     </div>
-    <div class="summary-card profit" id="netCard">
-      <div class="slabel">💰 月净利润</div>
+    <div class="summary-card net-card" id="netCard">
+      <div class="card-accent"></div>
+      <div class="card-icon">💰</div>
+      <div class="slabel">月净利润</div>
       <div class="sval" id="sumNet">¥0</div>
     </div>
   </div>
 
-  <!-- 表格 -->
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:130px">日期</th>
-          <th>营业额</th>
-          <th>推广费</th>
-          <th>买菜钱</th>
-          <th>天利润</th>
-          <th style="width:120px">备注</th>
-          <th style="width:40px"></th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-      <tfoot id="tableFoot"></tfoot>
-    </table>
+  <!-- 表格面板 -->
+  <div class="table-panel">
+    <div class="table-header-bar">
+      <h3>📋 每日明细</h3>
+      <span class="count-badge" id="listCount">共 0 天</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:130px">日期</th>
+            <th>营业额</th>
+            <th>推广费</th>
+            <th>买菜钱</th>
+            <th>天利润</th>
+            <th style="width:120px">备注</th>
+            <th style="width:48px"></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+        <tfoot id="tableFoot"></tfoot>
+      </table>
+    </div>
+    <div class="add-bar">
+      <button class="btn-add-row" onclick="addRow()">
+        <span style="font-size:1rem">＋</span> 添加一天
+      </button>
+    </div>
   </div>
-  <button class="btn-add-row" onclick="addRow()">＋ 添加一天</button>
-  <p class="tip">💡 所有数据自动保存在浏览器本地，关闭页面不丢失。切换月份查看不同数据。</p>
+
+  <p class="footer-note">
+    <span>💾</span> 数据自动保存在浏览器本地，关闭页面不丢失
+  </p>
+
 </main>
 
 <script>
-// ==================== 数据 ====================
+// ==================== 数据层 ====================
 const STORAGE_KEY = 'daily_profit_data';
-// 结构: { "2026-08": { rent: 5000, days: [{id,date,revenue,marketing,ingredients,note}] } }
 
 function loadAll() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
@@ -212,28 +589,36 @@ function dailyProfit(row) {
 function calcSummary() {
   let totalRevenue = 0, totalMarketing = 0, totalIngredients = 0;
   monthData.days.forEach(d => {
-    totalRevenue += d.revenue || 0;
+    totalRevenue   += d.revenue   || 0;
     totalMarketing += d.marketing || 0;
     totalIngredients += d.ingredients || 0;
   });
-  const totalDailyProfit = totalRevenue - totalMarketing - totalIngredients;
+  const totalCost = totalMarketing + totalIngredients;
+  const totalDailyProfit = totalRevenue - totalCost;
   const rent = monthData.rent || 0;
   const netProfit = totalDailyProfit - rent;
-  return { totalRevenue, totalMarketing, totalIngredients, totalCost: totalMarketing + totalIngredients, totalDailyProfit, rent, netProfit };
+  return { totalRevenue, totalMarketing, totalIngredients, totalCost, totalDailyProfit, rent, netProfit };
 }
 
 // ==================== 渲染 ====================
 function renderTable() {
   const tbody = document.getElementById('tableBody');
   const days = monthData.days;
+  document.getElementById('listCount').textContent = `共 ${days.length} 天`;
 
   if (days.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">暂无记录，点击下方「添加一天」开始记录</td></tr>`;
+    tbody.innerHTML = `
+      <tr><td colspan="7">
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <p>这个月还没有记录</p>
+          <p style="font-size:0.82rem;margin-top:4px">点击下方按钮开始记录每天的收支吧</p>
+        </div>
+      </td></tr>`;
     document.getElementById('tableFoot').innerHTML = '';
     return;
   }
 
-  // 按日期排序
   days.sort((a,b) => a.date.localeCompare(b.date));
 
   tbody.innerHTML = days.map((d, i) => {
@@ -242,24 +627,25 @@ function renderTable() {
     return `
       <tr data-idx="${i}">
         <td><input type="date" class="date-input" value="${d.date}" onchange="updateField(${i},'date',this.value)"></td>
-        <td><input type="number" value="${d.revenue||0}" step="0.01" min="0" onchange="updateField(${i},'revenue',+this.value)"></td>
-        <td><input type="number" value="${d.marketing||0}" step="0.01" min="0" onchange="updateField(${i},'marketing',+this.value)"></td>
-        <td><input type="number" value="${d.ingredients||0}" step="0.01" min="0" onchange="updateField(${i},'ingredients',+this.value)"></td>
+        <td><input type="number" value="${d.revenue||0}" step="0.01" min="0" placeholder="0" onchange="updateField(${i},'revenue',+this.value)"></td>
+        <td><input type="number" value="${d.marketing||0}" step="0.01" min="0" placeholder="0" onchange="updateField(${i},'marketing',+this.value)"></td>
+        <td><input type="number" value="${d.ingredients||0}" step="0.01" min="0" placeholder="0" onchange="updateField(${i},'ingredients',+this.value)"></td>
         <td class="col-profit ${cls}">¥${profit.toFixed(2)}</td>
         <td><input type="text" class="note-input" value="${escapeHtml(d.note||'')}" placeholder="-" onchange="updateField(${i},'note',this.value)"></td>
-        <td><button class="btn-del" onclick="delRow(${i})" title="删除">✕</button></td>
+        <td><button class="btn-del" onclick="delRow(${i})" title="删除本条">✕</button></td>
       </tr>`;
   }).join('');
 
   // 合计行
   const s = calcSummary();
+  const cls = s.totalDailyProfit >= 0 ? 'profit-positive' : 'profit-negative';
   document.getElementById('tableFoot').innerHTML = `
     <tr>
-      <td>合计</td>
+      <td>📌 合计</td>
       <td>¥${s.totalRevenue.toFixed(2)}</td>
       <td>¥${s.totalMarketing.toFixed(2)}</td>
       <td>¥${s.totalIngredients.toFixed(2)}</td>
-      <td class="col-profit ${s.totalDailyProfit>=0?'profit-positive':'profit-negative'}">¥${s.totalDailyProfit.toFixed(2)}</td>
+      <td class="col-profit ${cls}">¥${s.totalDailyProfit.toFixed(2)}</td>
       <td></td>
       <td></td>
     </tr>`;
@@ -268,14 +654,12 @@ function renderTable() {
 function renderSummary() {
   const s = calcSummary();
   document.getElementById('sumRevenue').textContent = '¥' + s.totalRevenue.toFixed(2);
-  document.getElementById('sumCost').textContent = '¥' + (s.totalCost).toFixed(2);
-  document.getElementById('sumDaily').textContent = '¥' + s.totalDailyProfit.toFixed(2);
+  document.getElementById('sumCost').textContent    = '¥' + s.totalCost.toFixed(2);
+  document.getElementById('sumDaily').textContent   = '¥' + s.totalDailyProfit.toFixed(2);
+  document.getElementById('sumNet').textContent     = '¥' + s.netProfit.toFixed(2);
 
-  const netEl = document.getElementById('sumNet');
-  netEl.textContent = '¥' + s.netProfit.toFixed(2);
   const netCard = document.getElementById('netCard');
-  netCard.classList.toggle('profit', s.netProfit >= 0);
-  netCard.classList.toggle('loss', s.netProfit < 0);
+  netCard.classList.toggle('loss-card', s.netProfit < 0);
 }
 
 // ==================== 操作 ====================
@@ -288,7 +672,14 @@ function updateField(idx, field, value) {
 
 function addRow() {
   const today = new Date().toISOString().slice(0,10);
-  monthData.days.push({ id: Date.now().toString(36), date: today, revenue: 0, marketing: 0, ingredients: 0, note: '' });
+  monthData.days.push({
+    id: Date.now().toString(36),
+    date: today,
+    revenue: 0,
+    marketing: 0,
+    ingredients: 0,
+    note: ''
+  });
   saveMonthData(currentMonth, monthData);
   renderTable();
   renderSummary();
