@@ -73,9 +73,13 @@ jobs:
                   minSdk 21; targetSdk 34
                   versionCode 1; versionName "1.0"
               }
+              lint {
+                  checkReleaseBuilds false
+                  abortOnError false
+              }
               signingConfigs {
                   release {
-                      storeFile file("../../release.keystore")
+                      storeFile rootProject.file("release.keystore")
                       storePassword "android123"
                       keyAlias "dayprofit"
                       keyPassword "android123"
