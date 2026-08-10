@@ -18,66 +18,50 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.5'
+          gradle-version: '8.4'
 
-      - name: Setup Android SDK
+      - name: Use pre-installed Android SDK
         run: |
-          ANDROID_HOME=$HOME/android-sdk
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          curl -sL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q /tmp/tools.zip -d $ANDROID_HOME/cmdline-tools
-          # The zip contains a 'cmdline-tools' directory inside
-          if [ -d "$ANDROID_HOME/cmdline-tools/cmdline-tools" ]; then
-            mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-          else
-            mkdir -p $ANDROID_HOME/cmdline-tools/latest
-            mv $ANDROID_HOME/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ 2>/dev/null || true
-          fi
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
-          sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          echo "SDK setup done. Installed packages:"
-          ls -la $ANDROID_HOME/platforms/
-          ls -la $ANDROID_HOME/build-tools/
+          # GitHub 的 ubuntu-latest 自带 Android SDK
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "SDK at $ANDROID_SDK_ROOT"
+          ls "$ANDROID_SDK_ROOT/platforms/" || echo "no platforms dir"
+          ls "$ANDROID_SDK_ROOT/build-tools/" || echo "no build-tools dir"
+          # 安装需要的 SDK 组件
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" "build-tools;34.0.0" 2>&1 | tail -5
 
-      - name: Create project files
+      - name: Create project
         run: |
           mkdir -p app/src/main/java/com/dayprofit/app
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/mipmap-hdpi
           cp icon-192.png app/src/main/res/mipmap-hdpi/ic_launcher.png
 
+          # gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx2g' > gradle.properties
+
+          # settings.gradle
           cat > settings.gradle << 'EOF'
           pluginManagement {
-              repositories {
-                  gradlePluginPortal()
-                  google()
-                  mavenCentral()
-              }
+              repositories { gradlePluginPortal(); google(); mavenCentral() }
           }
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
+              repositories { google(); mavenCentral() }
           }
           rootProject.name = "DayProfit"
           include(":app")
           EOF
 
-          cat > gradle.properties << 'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          EOF
-
+          # root build.gradle
           cat > build.gradle << 'EOF'
-          plugins { id("com.android.application") version "8.2.0" apply false }
-          repositories { google(); mavenCentral() }
+          plugins { id("com.android.application") version "8.1.4" apply false }
           EOF
 
+          # app/build.gradle
           cat > app/build.gradle << 'EOF'
           plugins { id("com.android.application") }
           android {
@@ -85,13 +69,12 @@ jobs:
               compileSdk 34
               defaultConfig {
                   applicationId "com.dayprofit.app"
-                  minSdk 21; targetSdk 34
-                  versionCode 1; versionName "1.0"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
               }
-              lint {
-                  checkReleaseBuilds false
-                  abortOnError false
-              }
+              lint { checkReleaseBuilds false; abortOnError false }
               signingConfigs {
                   release {
                       storeFile rootProject.file("release.keystore")
@@ -106,6 +89,7 @@ jobs:
           }
           EOF
 
+          # AndroidManifest.xml
           cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -126,6 +110,7 @@ jobs:
           </manifest>
           EOF
 
+          # MainActivity.java
           cat > app/src/main/java/com/dayprofit/app/MainActivity.java << 'EOF'
           package com.dayprofit.app;
           import android.app.Activity;
@@ -153,12 +138,8 @@ jobs:
           }
           EOF
 
-          cat > app/src/main/res/values/styles.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="android:Theme.Material.NoActionBar"/>
-          </resources>
-          EOF
+          # styles.xml
+          echo '<resources><style name="AppTheme" parent="android:Theme.Material.NoActionBar"/></resources>' > app/src/main/res/values/styles.xml
 
       - name: Generate keystore
         run: |
@@ -173,20 +154,11 @@ jobs:
 
       - name: Create Gradle wrapper
         run: |
-          gradle wrapper --gradle-version 8.5
+          gradle wrapper --gradle-version 8.4
           chmod +x gradlew
 
-      - name: Diagnostic
-        run: |
-          echo "=== Java ===" && java -version
-          echo "=== ANDROID_HOME ===" && echo $ANDROID_HOME
-          ls -la $ANDROID_HOME/platforms/ 2>/dev/null || echo "no platforms"
-          ls -la $ANDROID_HOME/build-tools/ 2>/dev/null || echo "no build-tools"
-          echo "=== Gradle ===" && ./gradlew -v
-          echo "=== Dependencies ===" && ./gradlew :app:dependencies --console=plain 2>&1 | tail -50 || true
-
       - name: Build APK
-        run: ./gradlew app:assembleRelease --no-daemon --stacktrace --info
+        run: ./gradlew app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
