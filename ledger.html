@@ -117,6 +117,70 @@ input{ font-family:inherit; outline:none; border:none; }
   border-color: rgba(255,255,255,0.4);
 }
 
+.btn-cloud{
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  position: relative;
+}
+.btn-cloud:hover{ background: rgba(255,255,255,0.25); }
+.btn-cloud.synced{ background: rgba(34,197,94,0.3); }
+.btn-cloud.synced::after{
+  content: '';
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 7px; height: 7px;
+  background: #22C55E;
+  border-radius: 50%;
+}
+
+/* ====== 云同步面板 ====== */
+.cloud-panel{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+  display: none;
+  transition: var(--transition);
+}
+.cloud-panel.open{ display: block; }
+.cloud-panel h3{ font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+.cloud-row{ display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.cloud-row:last-child{ margin-bottom: 0; }
+.cloud-row input{
+  flex: 1; min-width: 200px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  background: var(--bg);
+  transition: var(--transition);
+}
+.cloud-row input:focus{ border-color: var(--primary); background: #fff; }
+.btn-cloud-action{
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.btn-upload{ background: #059669; color: #fff; }
+.btn-upload:hover{ background: #047857; }
+.btn-download{ background: var(--primary); color: #fff; }
+.btn-download:hover{ background: var(--primary-hover); }
+.cloud-status{ font-size: 0.8rem; color: var(--text3); margin-top: 6px; }
+.cloud-status.success{ color: var(--profit); }
+.cloud-status.error{ color: var(--loss); }
+
 /* ====== 主容器 ====== */
 .main{ max-width: 1024px; margin: 0 auto; padding: 24px 20px 100px; }
 
@@ -452,6 +516,7 @@ tfoot .profit-positive{ font-size: 0.98rem; }
       <h1>日利润计算器</h1>
     </div>
     <div class="header-right">
+      <button class="btn-cloud" id="btnCloud" onclick="toggleCloudPanel()" title="云端同步">☁️</button>
       <label>📅</label>
       <input type="month" id="monthSelect">
     </div>
@@ -470,6 +535,23 @@ tfoot .profit-positive{ font-size: 0.98rem; }
       <span class="yen">¥</span>
       <input type="number" id="rentInput" placeholder="0" step="0.01" min="0">
     </div>
+  </div>
+
+  <!-- 云端同步 -->
+  <div class="cloud-panel" id="cloudPanel">
+    <h3>☁️ 云端同步</h3>
+    <p style="font-size:0.82rem;color:var(--text3);margin-bottom:14px">
+      数据存储在 GitHub Gist，换设备也能恢复。需要 GitHub 个人访问令牌。
+    </p>
+    <div class="cloud-row">
+      <input type="password" id="githubToken" placeholder="粘贴 GitHub Personal Access Token">
+      <button class="btn-cloud-action btn-download" onclick="saveToken()">保存令牌</button>
+    </div>
+    <div class="cloud-row">
+      <button class="btn-cloud-action btn-upload" onclick="uploadToCloud()">📤 上传到云端</button>
+      <button class="btn-cloud-action btn-download" onclick="downloadFromCloud()">📥 从云端下载</button>
+    </div>
+    <p class="cloud-status" id="cloudStatus"></p>
   </div>
 
   <!-- 摘要卡片 -->
@@ -702,6 +784,121 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ==================== 云端同步 ====================
+const CLOUD_KEYS = { token: 'cloud_token', gistId: 'cloud_gist_id', lastSync: 'cloud_last_sync' };
+
+function getToken() { return localStorage.getItem(CLOUD_KEYS.token) || ''; }
+function getGistId() { return localStorage.getItem(CLOUD_KEYS.gistId) || ''; }
+
+function status(msg, ok) {
+  const el = document.getElementById('cloudStatus');
+  el.textContent = msg;
+  el.className = 'cloud-status';
+  if (ok === true) el.classList.add('success');
+  if (ok === false) el.classList.add('error');
+}
+
+function toggleCloudPanel() {
+  document.getElementById('cloudPanel').classList.toggle('open');
+  // 回填 token
+  document.getElementById('githubToken').value = getToken();
+}
+
+function saveToken() {
+  const token = document.getElementById('githubToken').value.trim();
+  if (!token) { status('请输入有效的 GitHub Token', false); return; }
+  localStorage.setItem(CLOUD_KEYS.token, token);
+  status('令牌已保存 ✓', true);
+}
+
+async function uploadToCloud() {
+  const token = getToken();
+  if (!token) { status('请先保存 GitHub Token', false); return; }
+
+  status('正在上传...');
+  try {
+    const data = loadAll();
+    const content = JSON.stringify(data);
+    let gistId = getGistId();
+    let method = 'POST';
+    let url = 'https://api.github.com/gists';
+
+    if (gistId) {
+      method = 'PATCH';
+      url = 'https://api.github.com/gists/' + gistId;
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': 'token ' + token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        description: '日利润计算器数据备份',
+        public: false,
+        files: { 'ledger-data.json': { content } },
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'HTTP ' + res.status);
+    }
+
+    const result = await res.json();
+    if (!gistId) {
+      localStorage.setItem(CLOUD_KEYS.gistId, result.id);
+    }
+    localStorage.setItem(CLOUD_KEYS.lastSync, new Date().toISOString());
+    document.getElementById('btnCloud').classList.add('synced');
+    status('上传成功 ✓ ' + new Date().toLocaleTimeString(), true);
+  } catch (e) {
+    status('上传失败: ' + e.message, false);
+  }
+}
+
+async function downloadFromCloud() {
+  const token = getToken();
+  const gistId = getGistId();
+  if (!token) { status('请先保存 GitHub Token', false); return; }
+  if (!gistId) { status('请先上传一次数据，创建云端备份', false); return; }
+
+  if (!confirm('即将从云端下载数据，会覆盖本地数据，确定继续？')) return;
+
+  status('正在下载...');
+  try {
+    const res = await fetch('https://api.github.com/gists/' + gistId, {
+      headers: { 'Authorization': 'token ' + token },
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const gist = await res.json();
+    const file = gist.files && gist.files['ledger-data.json'];
+    if (!file || !file.content) throw new Error('云端无数据');
+
+    const data = JSON.parse(file.content);
+    saveAll(data);
+    localStorage.setItem(CLOUD_KEYS.lastSync, new Date().toISOString());
+    document.getElementById('btnCloud').classList.add('synced');
+    status('下载成功 ✓ ' + new Date().toLocaleTimeString(), true);
+    loadMonth();
+  } catch (e) {
+    status('下载失败: ' + e.message, false);
+  }
+}
+
+// 初始化时检查同步状态
+(function checkSync() {
+  if (getGistId()) {
+    document.getElementById('githubToken').value = getToken();
+    const lastSync = localStorage.getItem(CLOUD_KEYS.lastSync);
+    if (lastSync) {
+      document.getElementById('btnCloud').classList.add('synced');
+    }
+  }
+})();
 
 // ==================== 启动 ====================
 init();
