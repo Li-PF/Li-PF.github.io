@@ -671,6 +671,7 @@ function addRow() {
 }
 
 function delRow(idx) {
+  if (!confirm('确定删除这条记录吗？')) return;
   monthData.days.splice(idx, 1);
   saveMonthData(currentMonth, monthData);
   renderAll();
